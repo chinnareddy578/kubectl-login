@@ -335,11 +335,68 @@ echo '{"apiVersion":"client.authentication.k8s.io/v1beta1","kind":"ExecCredentia
 
 The output should be valid ExecCredential JSON with token and expiration.
 
+## Troubleshooting Test Issues
+
+### Build Error: "undefined: max"
+
+**Problem**: `go: compilation failed: undefined: max`
+
+**Cause**: go-jose/v4 requires Go 1.22+
+
+**Solution**: Update go.mod to require Go 1.22:
+```bash
+# Check your go.mod
+head -3 go.mod
+
+# Should show: go 1.22 (not 1.21)
+
+# If not, update it:
+sed -i '' 's/go 1.21/go 1.22/' go.mod
+
+# Clean cache and rebuild
+go clean -cache
+go build -o kubectl-login
+```
+
+### Keycloak Setup Fails
+
+**Problem**: `Failed to get admin token` during setup
+
+**Solution**:
+```bash
+# 1. Check Keycloak is running
+docker-compose ps
+
+# 2. Check logs
+docker-compose logs keycloak | tail -30
+
+# 3. Wait for initialization (can take 30-60 seconds)
+sleep 30
+
+# 4. Retry setup
+./scripts/setup-keycloak.sh
+```
+
+### Test Plugin Integration with Kubernetes
+
+**Limitation**: minikube uses certificate-based auth, not OIDC
+
+When testing with minikube:
+- ✅ Direct `kubectl login` command works
+- ✅ Exec credential JSON interface works
+- ❌ kubectl integration may fail (expected - different auth systems)
+
+**For full integration testing, use a cluster with OIDC enabled:**
+- GKE with OIDC
+- EKS with OIDC
+- Kind cluster with OIDC provider
+- Azure AKS with OIDC
+
 ## Next Steps
 
 - Add more unit tests for edge cases
 - Improve mock OIDC provider (add JWT signing)
-- Add end-to-end tests with real kubectl
+- Add end-to-end tests with real OIDC-enabled Kubernetes
 - Add performance/benchmark tests
 - Add fuzzing tests for input validation
 

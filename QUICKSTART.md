@@ -102,6 +102,49 @@ kubectl get pods
 
 The plugin will automatically authenticate on the first command and reuse/refresh tokens as needed.
 
+## Troubleshooting
+
+### "unknown command 'login'" Error
+
+The plugin isn't in your PATH. Verify it's installed:
+```bash
+# Check if plugin is discoverable
+kubectl plugin list | grep login
+
+# If not found, ensure ~/bin is in PATH
+echo $PATH | grep -o "$HOME/bin"
+
+# If empty, add to PATH and reload shell
+echo 'export PATH="$HOME/bin:$PATH"' >> ~/.zshrc
+source ~/.zshrc
+```
+
+### Browser Doesn't Open
+
+Copy the URL from the terminal output and paste it into your browser manually.
+
+### "Connection refused" Error
+
+Make sure your OIDC provider is running:
+```bash
+# For Keycloak
+docker-compose ps | grep keycloak
+
+# For other providers, verify endpoint is accessible
+curl https://your-oidc-provider.com/.well-known/openid-configuration
+```
+
+### Config File Path Issue
+
+Use absolute paths, not tilde (~):
+```bash
+# ❌ Wrong
+--config ~/.kubectl-login/config.json
+
+# ✅ Correct
+--config $HOME/.kubectl-login/config.json
+```
+
 ## That's It! 🎉
 
 You're now authenticated with SSO. For local testing, see [README.md](README.md#local-oidc-testing-with-keycloak).

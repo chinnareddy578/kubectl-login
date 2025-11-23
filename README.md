@@ -28,6 +28,12 @@ For detailed setup instructions, see [QUICKSTART.md](QUICKSTART.md).
 
 For local testing with Keycloak, see the [Local OIDC Testing](#local-oidc-testing) section below.
 
+## Requirements
+
+- **Go**: 1.22 or higher
+- **kubectl**: 1.19 or higher
+- **OpenID Connect Provider**: Any OIDC-compliant provider (Google, Okta, Azure AD, Keycloak, etc.)
+
 ## Installation
 
 ### Build from Source
@@ -260,6 +266,25 @@ kubectl login \
 
 ## Troubleshooting
 
+### Plugin Not Found
+
+**Problem**: `error: unknown command "login" for "kubectl"`
+
+**Solution**:
+```bash
+# 1. Verify plugin is in PATH
+kubectl plugin list | grep login
+
+# If empty, add ~/bin to PATH:
+export PATH="$HOME/bin:$PATH"
+
+# 2. Reload shell
+source ~/.zshrc  # or source ~/.bashrc
+
+# 3. Verify again
+kubectl plugin list | grep login
+```
+
 ### Browser doesn't open
 
 If the browser doesn't open automatically, the plugin will display the URL. Copy and paste it into your browser manually.
@@ -278,6 +303,54 @@ If token refresh fails, the plugin will attempt a new authentication. Clear the 
 
 ```bash
 rm ~/.cache/kubectl-login/tokens.json
+```
+
+### Config file not found
+
+**Problem**: `open ~/.kubectl-login/config.json: no such file or directory`
+
+**Solution**: Use absolute path in kubeconfig (tilde ~ doesn't expand):
+```bash
+# ❌ Wrong (tilde not expanded)
+--exec-arg=~/.kubectl-login/config.json
+
+# ✅ Correct (absolute path)
+--exec-arg=$HOME/.kubectl-login/config.json
+```
+
+### Keycloak connection refused
+
+**Problem**: `connection refused` when testing with Keycloak
+
+**Solution**:
+```bash
+# Check Keycloak is running
+docker-compose ps | grep keycloak
+
+# Start if not running
+docker-compose up -d
+
+# Wait for it to be ready
+docker-compose logs -f keycloak | grep "Keycloak is ready"
+```
+
+### Invalid redirect URI
+
+**Problem**: `invalid_redirect_uri` error during authentication
+
+**Solution**: Ensure redirect URI is configured in your OIDC provider:
+```
+http://localhost:8000/callback
+```
+
+For Keycloak:
+```bash
+# Access admin console
+open http://localhost:8080
+
+# Login as admin/admin
+# Go to Clients → kubectl-login-client
+# Verify "Valid Redirect URIs" includes: http://localhost:8000/callback
 ```
 
 ## Development
