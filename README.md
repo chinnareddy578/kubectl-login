@@ -24,9 +24,9 @@ kubectl login --issuer-url https://your-oidc-provider.com --client-id your-clien
 # See examples/kubeconfig.example.yaml for reference
 ```
 
-For detailed setup instructions, see [QUICKSTART.md](QUICKSTART.md) or [NEXT_STEPS.md](NEXT_STEPS.md).
+For detailed setup instructions, see [QUICKSTART.md](QUICKSTART.md).
 
-**Need OIDC credentials?** See [OIDC_CREDENTIALS_GUIDE.md](OIDC_CREDENTIALS_GUIDE.md) for step-by-step instructions for Google, Okta, Azure AD, and other providers.
+For local testing with Keycloak, see the [Local OIDC Testing](#local-oidc-testing) section below.
 
 ## Installation
 
@@ -40,15 +40,39 @@ go build -o kubectl-login
 
 ### Install as kubectl Plugin
 
+kubectl automatically discovers plugins named `kubectl-*` in your PATH.
+
+**Option 1: Install to User Directory (Recommended)**
+
 ```bash
-# Copy the binary to a directory in your PATH
+# Create ~/bin if it doesn't exist
+mkdir -p ~/bin
+
+# Copy the binary
 cp kubectl-login ~/bin/
 
-# Or install to system directory
+# Add ~/bin to your PATH (add to ~/.zshrc, ~/.bashrc, or ~/.fish/config.fish)
+export PATH="$HOME/bin:$PATH"
+
+# Reload shell
+source ~/.zshrc  # or source ~/.bashrc
+```
+
+**Option 2: Install System-wide**
+
+```bash
 sudo cp kubectl-login /usr/local/bin/
 ```
 
-kubectl will automatically discover plugins named `kubectl-*` in your PATH.
+**Verify Installation**
+
+```bash
+kubectl plugin list | grep login
+# Should show: /path/to/kubectl-login
+
+kubectl login --help
+# Should display the plugin help
+```
 
 ## Usage
 
@@ -105,25 +129,50 @@ Then use it:
 kubectl login --config ~/.kubectl-login/config.json
 ```
 
-## Kubernetes Configuration
+## Kubernetes Integration
 
-To use this plugin with kubectl, configure your kubeconfig to use the exec credential plugin:
+### Configure kubeconfig for Automatic Authentication
+
+Edit your `~/.kube/config` to use the plugin for automatic authentication:
 
 ```yaml
 apiVersion: v1
 kind: Config
 users:
-- name: my-user
+- name: sso-user
   user:
     exec:
       apiVersion: client.authentication.k8s.io/v1beta1
       command: kubectl-login
       args:
-      - --issuer-url
-      - https://your-oidc-provider.com
-      - --client-id
-      - your-client-id
-      - --client-secret
+      - --config
+      - ~/.kubectl-login/config.json
+clusters:
+- name: my-cluster
+  cluster:
+    server: https://kubernetes.example.com
+    certificate-authority-data: LS0tLS1CRUdJTi... # base64 encoded cert
+contexts:
+- name: my-context
+  context:
+    user: sso-user
+    cluster: my-cluster
+current-context: my-context
+```
+
+### Test kubectl Integration
+
+Once configured, test with a kubectl command:
+
+```bash
+kubectl get pods
+```
+
+The plugin will:
+1. Check for a cached token (reuse if valid)
+2. Refresh the token if expiring soon
+3. Authenticate with OIDC provider if needed
+4. Return the token to kubectl for API calls
       - your-client-secret
 clusters:
 - name: my-cluster
@@ -264,22 +313,32 @@ go test -v ./pkg/auth
 
 See [TESTING.md](TESTING.md) for detailed testing documentation.
 
-### Local OIDC Testing
+### Local OIDC Testing with Keycloak
 
 Test with a self-hosted OIDC server (Keycloak) using Docker:
 
 ```bash
-# Start Keycloak
+# Start Keycloak and PostgreSQL
 docker-compose up -d
 
-# Setup Keycloak
+# Setup Keycloak realm, client, and test user
 ./scripts/setup-keycloak.sh
 
-# Test authentication
-./scripts/test-with-keycloak.sh
+# Get a token for testing
+curl -X POST "http://localhost:8080/realms/kubectl-login/protocol/openid-connect/token" \
+  -H "Content-Type: application/x-www-form-urlencoded" \
+  -d "grant_type=password" \
+  -d "client_id=kubectl-login-client" \
+  -d "client_secret=<client_secret_from_setup>" \
+  -d "username=testuser" \
+  -d "password=testpassword"
 ```
 
-See [LOCAL_TESTING.md](LOCAL_TESTING.md) for detailed instructions or [LOCAL_TESTING_QUICKSTART.md](LOCAL_TESTING_QUICKSTART.md) for a quick start.
+Test user credentials created by the setup script:
+- **Username**: `testuser`
+- **Password**: `testpassword`
+
+Configuration saved to `~/.kubectl-login/config.json` for local testing.
 
 ## License
 

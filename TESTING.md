@@ -261,6 +261,80 @@ func TestAuthenticator(t *testing.T) {
 }
 ```
 
+## Testing the kubectl Plugin
+
+### Install Plugin for Testing
+
+```bash
+# Build and install to ~/bin
+make build
+mkdir -p ~/bin
+cp kubectl-login ~/bin/
+
+# Add to PATH
+export PATH="$HOME/bin:$PATH"
+
+# Verify plugin is discoverable
+kubectl plugin list | grep login
+```
+
+### Test Plugin Discovery
+
+```bash
+# List all plugins
+kubectl plugin list
+
+# Test help
+kubectl login --help
+```
+
+### Test Plugin with Keycloak
+
+```bash
+# Start Keycloak
+docker-compose up -d
+
+# Setup Keycloak
+./scripts/setup-keycloak.sh
+
+# Create config file
+mkdir -p ~/.kubectl-login
+cat > ~/.kubectl-login/config.json <<EOF
+{
+  "issuer_url": "http://localhost:8080/realms/kubectl-login",
+  "client_id": "kubectl-login-client",
+  "client_secret": "$(grep 'Client Secret:' <<< '$(./scripts/setup-keycloak.sh)' | cut -d' ' -f3)",
+  "headless": false,
+  "port": 8000
+}
+EOF
+
+# Test plugin
+kubectl login --config ~/.kubectl-login/config.json
+
+# Test exec credential plugin (for kubeconfig integration)
+echo '{"apiVersion":"client.authentication.k8s.io/v1beta1","kind":"ExecCredential"}' | \
+  kubectl-login --config ~/.kubectl-login/config.json
+```
+
+### Test Exec Credential Plugin Mode
+
+Test the kubectl exec credential interface:
+
+```bash
+# Test with mock provider
+./scripts/test-with-keycloak.sh exec
+
+# Or manually test the JSON interface
+echo '{"apiVersion":"client.authentication.k8s.io/v1beta1","kind":"ExecCredential"}' | \
+  ./kubectl-login \
+    --issuer-url http://localhost:8080/realms/kubectl-login \
+    --client-id kubectl-login-client \
+    --client-secret YOUR_CLIENT_SECRET
+```
+
+The output should be valid ExecCredential JSON with token and expiration.
+
 ## Next Steps
 
 - Add more unit tests for edge cases

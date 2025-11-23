@@ -32,7 +32,7 @@ docker-compose up -d
 echo -e "${YELLOW}Step 2: Waiting for Keycloak to be ready...${NC}"
 echo "This may take 30-60 seconds..."
 for i in {1..60}; do
-    if curl -s -f http://localhost:8080/health/ready > /dev/null 2>&1; then
+    if curl -s -f http://localhost:8080/realms/master/.well-known/openid-configuration > /dev/null 2>&1; then
         echo -e "${GREEN}✓ Keycloak is ready!${NC}"
         break
     fi

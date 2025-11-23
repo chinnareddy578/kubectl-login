@@ -28,7 +28,7 @@ print_error() {
 
 # Check if Keycloak is running
 check_keycloak() {
-    if ! curl -s -f "${KEYCLOAK_URL}/health/ready" > /dev/null 2>&1; then
+    if ! curl -s -f "${KEYCLOAK_URL}/realms/master/.well-known/openid-configuration" > /dev/null 2>&1; then
         print_error "Keycloak is not running"
         print_info "Start it with: docker-compose up -d"
         exit 1

@@ -76,6 +76,6 @@ else
     echo "  3. Set redirect URI to: http://localhost:8000/callback"
     echo "  4. Get your Client ID and Client Secret"
     echo ""
-    echo "See OIDC_CREDENTIALS_GUIDE.md for detailed instructions."
+    echo "For local testing with Keycloak, run: ./scripts/setup-keycloak.sh"
 fi
 

@@ -9,10 +9,19 @@ Get up and running with kubectl-login in 5 minutes!
 make build
 
 # Install to your local bin (recommended)
-make install
+mkdir -p ~/bin
+cp kubectl-login ~/bin/
 
-# OR install system-wide
-make install-system
+# Add ~/bin to PATH (add to ~/.zshrc or ~/.bashrc)
+echo 'export PATH="$HOME/bin:$PATH"' >> ~/.zshrc
+source ~/.zshrc
+```
+
+Or install system-wide:
+```bash
+make install
+# or
+sudo cp kubectl-login /usr/local/bin/
 ```
 
 ## Step 2: Verify Installation
@@ -38,12 +47,10 @@ https://your-provider.com/.well-known/openid-configuration
 
 Look for the `issuer` field in the JSON response.
 
-**📖 Detailed Instructions**: See [OIDC_CREDENTIALS_GUIDE.md](OIDC_CREDENTIALS_GUIDE.md) for step-by-step instructions for:
-- Google Cloud Platform
-- Okta
-- Microsoft Azure AD
-- Keycloak
-- Generic OIDC providers
+**For Local Testing with Keycloak**: 
+- Issuer URL: `http://localhost:8080/realms/kubectl-login`
+- Run `./scripts/setup-keycloak.sh` to set up a local Keycloak instance
+- See [README.md](README.md#local-oidc-testing-with-keycloak) for details
 
 ## Step 4: Test Authentication
 
@@ -61,9 +68,11 @@ This will:
 
 ## Step 5: Configure kubectl
 
-Edit your `~/.kube/config` and add:
+Edit your `~/.kube/config` and add the plugin configuration for automatic authentication:
 
 ```yaml
+apiVersion: v1
+kind: Config
 users:
 - name: sso-user
   user:
@@ -71,10 +80,18 @@ users:
       apiVersion: client.authentication.k8s.io/v1beta1
       command: kubectl-login
       args:
-      - --issuer-url
-      - https://your-oidc-provider.com
-      - --client-id
-      - your-client-id
+      - --config
+      - ~/.kubectl-login/config.json
+clusters:
+- name: my-cluster
+  cluster:
+    server: https://kubernetes.example.com
+contexts:
+- name: my-context
+  context:
+    user: sso-user
+    cluster: my-cluster
+current-context: my-context
 ```
 
 Then test:
@@ -83,7 +100,9 @@ Then test:
 kubectl get pods
 ```
 
+The plugin will automatically authenticate on the first command and reuse/refresh tokens as needed.
+
 ## That's It! 🎉
 
-You're now authenticated with SSO. For more details, see [NEXT_STEPS.md](NEXT_STEPS.md).
+You're now authenticated with SSO. For local testing, see [README.md](README.md#local-oidc-testing-with-keycloak).
 
