@@ -1,0 +1,8 @@
+{
+  "issuer_url": "https://your-oidc-provider.com",
+  "client_id": "your-client-id",
+  "client_secret": "your-client-secret",
+  "headless": false,
+  "port": 8000
+}
+
